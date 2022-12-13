@@ -181,8 +181,8 @@ Matrix4 Scene::adjustProjection( Mesh*& model,  Camera*& cam)
 			{
 				{2/(r-l), 0, 0, -1*(r+l)/(r-l)},
 				{0, 2/(t-b), 0, -1*(t+b)/(t-b)},
-				{0, 0, -2/(f-n), -1*(f+n)/(f-n)},
-				{0, 0, 0, -1}
+				{0, 0, (-2)/(f-n), -1*(f+n)/(f-n)},
+				{0, 0, 0, 1}
 			};
 			res = Matrix4(res_init_orth);
 			break;
@@ -236,11 +236,6 @@ Matrix4 Scene::adjustViewport( Camera*& c)
 	return Matrix4(res_init);
 	
 }
-
-/*
-	Transformations, clipping, culling, rasterization are done here.
-	You may define helper functions.
-*/
 
 Vec4 Scene::getThreeVertices(Triangle& t, int vertex_no)
 {
@@ -304,7 +299,7 @@ Vec4 Scene::getThreeVertices(Triangle& t, int vertex_no)
 
 double Scene::f(Vec4 v0, Vec4 v1, double x, double y)
 {
-	return x*(v0.y - v1.y) + y*(v1.x - v0.x) + v0.x*v1.y - v0.y*v1.x;
+	return x*(v0.y-v1.y) + y*(v1.x-v0.x) +  v0.x*v1.y - v0.y*v1.x;
 }
 
 
@@ -429,24 +424,20 @@ void Scene::paint(Vec4 v[3], int mesh_type, Camera* camera)
 			}
 		}
 		break;
+	}	
 	}
-
-
-		
-	}
-	
 }
 
 
-bool Scene::isBackfaceCulled(Vec4  v0, Vec4  v1, Vec4  v2) {
-    Vec3 v_0 = Vec3(v0.x, v0.y, v0.z, v0.colorId);
-    Vec3 v_1 = Vec3(v1.x, v1.y, v1.z, v1.colorId);
-    Vec3 v_2 = Vec3(v2.x, v2.y, v2.z, v2.colorId);
-    Vec3 edge01 = subtractVec3(v_1, v_0);
-    Vec3 edge02 = subtractVec3(v_2, v_0);
-    Vec3 normalVector = normalizeVec3(crossProductVec3(edge01, edge02));
-    double res = dotProductVec3(normalVector, v_0); // View Vector = v_0 - origin
-    return (res < 0);
+bool Scene::facingBack(Vec4  v[3]) {
+
+    Vec3 v0 = Vec3(v[0].x, v[0].y, v[0].z, v[0].colorId);
+    Vec3 v1 = Vec3(v[1].x, v[1].y, v[1].z, v[1].colorId);
+    Vec3 v2 = Vec3(v[2].x, v[2].y, v[2].z, v[2].colorId);
+  
+    Vec3 normalVector = normalizeVec3(crossProductVec3(subtractVec3(v1, v0), subtractVec3(v2, v0)));
+
+    return (dotProductVec3(normalVector, v1) < 0);
 }
 
 
@@ -481,26 +472,18 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 				vertices[k]=res;
 
 			}
-			if(cullingEnabled && isBackfaceCulled(vertices[0], vertices[1], vertices[2]))
+			if(cullingEnabled && facingBack(vertices))
 			{
 				continue;
 			}
 			else
 			{
 				paint(vertices,mesh_type,camera);
-
 			}
-
-			
-			
 		}
 	}
 	return ;
 }
-
-/*
-	Parses XML file
-*/
 
 
 Scene::Scene(const char *xmlPath)
